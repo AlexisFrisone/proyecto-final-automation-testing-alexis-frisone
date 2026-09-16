@@ -1,0 +1,21 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Reportes y capturas generados en cada ejecución
+reports/
+!reports/.gitkeep
+
+# Cachés de Python y pytest
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Configuración de editores
+.vscode/
+.idea/
+
+# Sistema operativo
+Thumbs.db
+.DS_Store
