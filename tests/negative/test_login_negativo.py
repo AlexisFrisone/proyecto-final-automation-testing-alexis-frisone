@@ -73,3 +73,25 @@ def test_login_con_usuario_inexistente_no_revela_si_el_usuario_existe(driver):
     assert helpers.elemento_existe(driver, Localizadores.CAMPO_USUARIO), (
         "El formulario de login debería seguir visible tras el intento fallido"
     )
+
+
+@pytest.mark.login
+@pytest.mark.negativo
+@pytest.mark.parametrize("ruta", ["/inventory.html", "/cart.html"])
+def test_acceso_directo_sin_sesion_redirige_al_login(driver, ruta):
+    """Abrir una página interna por URL sin haber iniciado sesión no concede acceso.
+
+    La aplicación redirige al login y explica qué página se intentó abrir.
+    """
+    driver.get(helpers.URL_BASE.rstrip("/") + ruta)
+
+    mensaje = helpers.obtener_mensaje_error(driver)
+    assert mensaje == helpers.error_acceso_sin_login(ruta), (
+        f"Mensaje de error inesperado: '{mensaje}'"
+    )
+    assert ruta not in driver.current_url, (
+        f"El sistema permitió abrir '{ruta}' sin sesión iniciada"
+    )
+    assert helpers.elemento_existe(driver, Localizadores.CAMPO_USUARIO), (
+        "Debería mostrarse el formulario de login"
+    )

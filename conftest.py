@@ -26,11 +26,14 @@ def driver():
     arranca con una sesión nueva. Esto evita que el resultado de un test dependa del
     estado que haya dejado otro y permite ejecutarlos en cualquier orden.
 
-    El `yield` garantiza que el navegador se cierre incluso si el test falla.
+    El `try/finally` garantiza que el navegador se cierre siempre, pase lo que pase
+    con el test, para no dejar ventanas de Chrome ni procesos de ChromeDriver abiertos.
     """
     navegador = helpers.iniciar_driver()
-    yield navegador
-    navegador.quit()
+    try:
+        yield navegador
+    finally:
+        navegador.quit()
 
 
 @pytest.fixture

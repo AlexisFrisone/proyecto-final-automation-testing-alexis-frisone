@@ -48,3 +48,33 @@ def test_login_con_credenciales_validas_redirige_al_inventario(driver):
     assert not helpers.elemento_existe(driver, Localizadores.MENSAJE_ERROR), (
         "El login fue exitoso pero la página muestra un mensaje de error"
     )
+
+
+@pytest.mark.login
+def test_logout_cierra_la_sesion_y_vuelve_al_login(driver_logueado):
+    """Cerrar sesión desde el menú lateral vuelve al formulario de login.
+
+    Validaciones:
+        - Se muestra el formulario de login en la URL base.
+        - La sesión quedó realmente cerrada: volver al inventario por URL exige
+          iniciar sesión otra vez.
+    """
+    driver = driver_logueado
+
+    # --- Acción ---
+    helpers.cerrar_sesion(driver)
+
+    # --- Validación: vuelta al login ---
+    assert driver.current_url == helpers.URL_BASE, (
+        f"Tras el logout se esperaba la URL de login, se obtuvo: {driver.current_url}"
+    )
+    assert helpers.elemento_existe(driver, Localizadores.BOTON_LOGIN), (
+        "El formulario de login no se muestra después del logout"
+    )
+
+    # --- Validación: la sesión ya no es válida ---
+    driver.get(helpers.URL_INVENTARIO)
+    mensaje = helpers.obtener_mensaje_error(driver)
+    assert mensaje == helpers.error_acceso_sin_login("/inventory.html"), (
+        f"Se esperaba el aviso de acceso sin sesión, se obtuvo: '{mensaje}'"
+    )

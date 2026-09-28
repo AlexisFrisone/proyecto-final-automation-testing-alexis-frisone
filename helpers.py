@@ -9,9 +9,10 @@ sigue funcionando.
 """
 
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
@@ -58,6 +59,26 @@ ERROR_USUARIO_BLOQUEADO = "Epic sadface: Sorry, this user has been locked out."
 ERROR_USUARIO_REQUERIDO = "Epic sadface: Username is required"
 ERROR_PASSWORD_REQUERIDA = "Epic sadface: Password is required"
 
+# Mensajes de validación del formulario de checkout.
+ERROR_NOMBRE_REQUERIDO = "Error: First Name is required"
+ERROR_APELLIDO_REQUERIDO = "Error: Last Name is required"
+ERROR_CODIGO_POSTAL_REQUERIDO = "Error: Postal Code is required"
+
+
+def error_acceso_sin_login(ruta):
+    """Devuelve el mensaje que muestra la app al abrir una página interna sin sesión.
+
+    `ruta` es la parte de la URL posterior al dominio, por ejemplo '/cart.html'.
+    """
+    return f"Epic sadface: You can only access '{ruta}' when you are logged in."
+
+
+# Valores del <select> de ordenamiento del catálogo.
+ORDEN_NOMBRE_A_Z = "az"
+ORDEN_NOMBRE_Z_A = "za"
+ORDEN_PRECIO_MENOR_A_MAYOR = "lohi"
+ORDEN_PRECIO_MAYOR_A_MENOR = "hilo"
+
 
 # ---------------------------------------------------------------------------
 # Localizadores
@@ -75,6 +96,7 @@ class Localizadores:
     CAMPO_PASSWORD = (By.ID, "password")
     BOTON_LOGIN = (By.ID, "login-button")
     MENSAJE_ERROR = (By.CSS_SELECTOR, '[data-test="error"]')
+    BOTON_CERRAR_ERROR = (By.CSS_SELECTOR, '[data-test="error-button"]')
 
     # --- Pantalla de inventario (catálogo) ---
     TITULO_PAGINA = (By.CLASS_NAME, "title")
@@ -83,15 +105,25 @@ class Localizadores:
     NOMBRE_PRODUCTO = (By.CLASS_NAME, "inventory_item_name")
     PRECIO_PRODUCTO = (By.CLASS_NAME, "inventory_item_price")
     BOTON_AGREGAR = (By.CLASS_NAME, "btn_inventory")
-    FILTRO_ORDENAMIENTO = (By.CSS_SELECTOR, '[data-test="product_sort_container"]')
+    FILTRO_ORDENAMIENTO = (By.CSS_SELECTOR, '[data-test="product-sort-container"]')
     BOTON_MENU = (By.ID, "react-burger-menu-btn")
     LINK_LOGOUT = (By.ID, "logout_sidebar_link")
+    LINK_RESET_ESTADO = (By.ID, "reset_sidebar_link")
+
+    # --- Detalle de producto ---
+    NOMBRE_DETALLE = (By.CLASS_NAME, "inventory_details_name")
+    PRECIO_DETALLE = (By.CLASS_NAME, "inventory_details_price")
+    BOTON_AGREGAR_DETALLE = (By.ID, "add-to-cart")
+    BOTON_QUITAR_DETALLE = (By.ID, "remove")
 
     # --- Carrito ---
     ICONO_CARRITO = (By.CLASS_NAME, "shopping_cart_link")
     BADGE_CARRITO = (By.CLASS_NAME, "shopping_cart_badge")
+    LISTA_CARRITO = (By.CLASS_NAME, "cart_list")
     ITEM_CARRITO = (By.CLASS_NAME, "cart_item")
     NOMBRE_ITEM_CARRITO = (By.CSS_SELECTOR, ".cart_item .inventory_item_name")
+    PRECIO_ITEM_CARRITO = (By.CSS_SELECTOR, ".cart_item .inventory_item_price")
+    BOTON_QUITAR_ITEM_CARRITO = (By.CSS_SELECTOR, ".cart_item .cart_button")
     BOTON_CHECKOUT = (By.ID, "checkout")
     BOTON_SEGUIR_COMPRANDO = (By.ID, "continue-shopping")
 
@@ -100,7 +132,10 @@ class Localizadores:
     CAMPO_APELLIDO = (By.ID, "last-name")
     CAMPO_CODIGO_POSTAL = (By.ID, "postal-code")
     BOTON_CONTINUAR = (By.ID, "continue")
+    BOTON_CANCELAR = (By.ID, "cancel")
     BOTON_FINALIZAR = (By.ID, "finish")
+    SUBTOTAL_COMPRA = (By.CSS_SELECTOR, '[data-test="subtotal-label"]')
+    IMPUESTO_COMPRA = (By.CSS_SELECTOR, '[data-test="tax-label"]')
     TOTAL_COMPRA = (By.CSS_SELECTOR, '[data-test="total-label"]')
     MENSAJE_COMPRA_EXITOSA = (By.CLASS_NAME, "complete-header")
     BOTON_VOLVER_PRODUCTOS = (By.ID, "back-to-products")
@@ -120,6 +155,15 @@ def iniciar_driver():
     opciones.add_argument("--start-maximized")
     # Silencia los mensajes de consola de ChromeDriver, que ensucian la salida de pytest.
     opciones.add_experimental_option("excludeSwitches", ["enable-logging"])
+    # Desactiva el gestor de contraseñas de Chrome. Como "secret_sauce" figura en
+    # filtraciones públicas, Chrome abre el aviso "Cambiá tu contraseña" después del
+    # login; ese popup le roba el foco a la página y hace que se pierdan clics.
+    opciones.add_experimental_option("prefs", {
+        "credentials_enable_service": False,
+        "profile.password_manager_enabled": False,
+        "profile.password_manager_leak_detection": False,
+    })
+    opciones.add_argument("--disable-features=PasswordLeakDetection")
 
     if MODO_HEADLESS:
         opciones.add_argument("--headless=new")
@@ -165,6 +209,13 @@ def esperar_url_contiene(driver, fragmento, timeout=TIMEOUT_POR_DEFECTO):
     Devuelve True si la redirección ocurrió dentro del timeout.
     """
     return WebDriverWait(driver, timeout).until(EC.url_contains(fragmento))
+
+
+def esperar_ausencia(driver, localizador, timeout=TIMEOUT_POR_DEFECTO):
+    """Espera a que el elemento deje de estar visible (o desaparezca del DOM)."""
+    return WebDriverWait(driver, timeout).until(
+        EC.invisibility_of_element_located(localizador)
+    )
 
 
 def elemento_existe(driver, localizador):
@@ -277,6 +328,21 @@ def obtener_contador_carrito(driver):
     return int(badges[0].text)
 
 
+def esperar_contador_carrito(driver, esperado, timeout=TIMEOUT_POR_DEFECTO):
+    """Espera a que el badge del carrito muestre `esperado` y devuelve el valor final.
+
+    Si el valor no llega dentro del timeout no lanza excepción: devuelve lo que
+    muestra el badge, para que el assert del test informe el valor real.
+    """
+    try:
+        WebDriverWait(driver, timeout).until(
+            lambda d: obtener_contador_carrito(d) == esperado
+        )
+    except TimeoutException:
+        pass
+    return obtener_contador_carrito(driver)
+
+
 def ir_al_carrito(driver):
     """Abre el carrito de compras y espera la redirección."""
     esperar_elemento_clickeable(driver, Localizadores.ICONO_CARRITO).click()
@@ -284,7 +350,13 @@ def ir_al_carrito(driver):
 
 
 def obtener_nombres_en_carrito(driver):
-    """Devuelve la lista de nombres de los productos presentes en el carrito."""
+    """Devuelve la lista de nombres de los productos presentes en el carrito.
+
+    Sirve tanto para el carrito como para el resumen del checkout. Primero espera a
+    que la lista esté dibujada: justo después de navegar, la URL ya cambió pero
+    React todavía no renderizó los ítems, y se leería una lista vacía.
+    """
+    esperar_elemento(driver, Localizadores.LISTA_CARRITO)
     elementos = driver.find_elements(*Localizadores.NOMBRE_ITEM_CARRITO)
     return [elemento.text for elemento in elementos]
 
@@ -295,3 +367,86 @@ def completar_datos_checkout(driver, nombre, apellido, codigo_postal):
     esperar_elemento(driver, Localizadores.CAMPO_APELLIDO).send_keys(apellido)
     esperar_elemento(driver, Localizadores.CAMPO_CODIGO_POSTAL).send_keys(codigo_postal)
     esperar_elemento_clickeable(driver, Localizadores.BOTON_CONTINUAR).click()
+
+
+def ir_al_checkout(driver):
+    """Desde el carrito, presiona "Checkout" y espera el formulario de datos."""
+    esperar_elemento_clickeable(driver, Localizadores.BOTON_CHECKOUT).click()
+    esperar_url_contiene(driver, "/checkout-step-one.html")
+
+
+def finalizar_compra(driver):
+    """En el resumen del pedido, presiona "Finish" y espera la confirmación."""
+    esperar_elemento_clickeable(driver, Localizadores.BOTON_FINALIZAR).click()
+    esperar_url_contiene(driver, "/checkout-complete.html")
+
+
+def cerrar_sesion(driver):
+    """Abre el menú lateral, presiona "Logout" y espera volver al login."""
+    esperar_elemento_clickeable(driver, Localizadores.BOTON_MENU).click()
+    esperar_elemento_clickeable(driver, Localizadores.LINK_LOGOUT).click()
+    esperar_elemento(driver, Localizadores.CAMPO_USUARIO)
+
+
+def ordenar_productos(driver, criterio):
+    """Elige un criterio del filtro de ordenamiento (ver constantes ORDEN_*)."""
+    filtro = esperar_elemento(driver, Localizadores.FILTRO_ORDENAMIENTO)
+    Select(filtro).select_by_value(criterio)
+
+
+def convertir_precio(texto):
+    """Convierte un texto con importe ('$29.99' o 'Total: $43.18') a float."""
+    return float(texto.split("$")[-1])
+
+
+def obtener_nombres_productos(driver):
+    """Devuelve los nombres de los productos del catálogo, en el orden mostrado."""
+    elementos = esperar_elementos(driver, Localizadores.NOMBRE_PRODUCTO)
+    return [elemento.text for elemento in elementos]
+
+
+def obtener_precios_productos(driver):
+    """Devuelve los precios del catálogo como floats, en el orden mostrado."""
+    elementos = esperar_elementos(driver, Localizadores.PRECIO_PRODUCTO)
+    return [convertir_precio(elemento.text) for elemento in elementos]
+
+
+def obtener_precios_en_carrito(driver):
+    """Devuelve los precios de los ítems del carrito (o del resumen) como floats."""
+    esperar_elemento(driver, Localizadores.LISTA_CARRITO)
+    elementos = driver.find_elements(*Localizadores.PRECIO_ITEM_CARRITO)
+    return [convertir_precio(elemento.text) for elemento in elementos]
+
+
+def quitar_producto_del_carrito(driver, indice=0):
+    """Presiona "Remove" sobre el ítem indicado dentro de la página del carrito."""
+    botones = esperar_elementos(driver, Localizadores.BOTON_QUITAR_ITEM_CARRITO)
+    botones[indice].click()
+
+
+def abrir_detalle_producto(driver, indice=0):
+    """Abre la página de detalle del producto indicado haciendo clic en su nombre.
+
+    Devuelve los datos que mostraba la tarjeta del catálogo, para compararlos con
+    los del detalle.
+    """
+    producto = obtener_productos(driver)[indice]
+    datos = obtener_datos_producto(producto)
+    producto.find_element(*Localizadores.NOMBRE_PRODUCTO).click()
+    esperar_url_contiene(driver, "/inventory-item.html")
+    return datos
+
+
+def obtener_datos_detalle(driver):
+    """Devuelve nombre y precio que muestra la página de detalle de un producto."""
+    return {
+        "nombre": esperar_elemento(driver, Localizadores.NOMBRE_DETALLE).text,
+        "precio": esperar_elemento(driver, Localizadores.PRECIO_DETALLE).text,
+    }
+
+
+def resetear_estado_app(driver):
+    """Usa la opción "Reset App State" del menú lateral y espera que el carrito se vacíe."""
+    esperar_elemento_clickeable(driver, Localizadores.BOTON_MENU).click()
+    esperar_elemento_clickeable(driver, Localizadores.LINK_RESET_ESTADO).click()
+    esperar_ausencia(driver, Localizadores.BADGE_CARRITO)
