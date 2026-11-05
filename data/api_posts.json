@@ -1,0 +1,25 @@
+{
+  "total_posts": 100,
+  "posts_existentes": [
+    {"caso": "primer_post", "id": 1, "userId": 1},
+    {"caso": "post_intermedio", "id": 50, "userId": 5},
+    {"caso": "ultimo_post", "id": 100, "userId": 10}
+  ],
+  "ids_inexistentes": [
+    {"caso": "id_fuera_de_rango", "id": 101},
+    {"caso": "id_muy_grande", "id": 999999},
+    {"caso": "id_cero", "id": 0},
+    {"caso": "id_no_numerico", "id": "abc"}
+  ],
+  "posts_nuevos": [
+    {
+      "caso": "post_simple",
+      "cuerpo": {"title": "Framework de automatización", "body": "Post creado desde pytest + requests", "userId": 1}
+    },
+    {
+      "caso": "post_con_acentos",
+      "cuerpo": {"title": "Pruebas con ñ y tildes: áéíóú", "body": "Validamos que la API respete UTF-8", "userId": 7}
+    }
+  ],
+  "post_actualizado": {"id": 1, "title": "Título actualizado", "body": "Contenido reemplazado con PUT", "userId": 1}
+}
