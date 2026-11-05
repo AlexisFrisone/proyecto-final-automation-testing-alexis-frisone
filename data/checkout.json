@@ -1,0 +1,55 @@
+{
+  "compradores_validos": [
+    {
+      "caso": "comprador_estandar",
+      "nombre": "Alexis",
+      "apellido": "Frisone",
+      "codigo_postal": "1704",
+      "productos": ["Sauce Labs Backpack", "Sauce Labs Bike Light"]
+    },
+    {
+      "caso": "caracteres_especiales",
+      "nombre": "Ñandú-O'Brien Güemes",
+      "apellido": "Pérez y Muñoz",
+      "codigo_postal": "AB-12 34",
+      "productos": ["Sauce Labs Onesie"]
+    },
+    {
+      "caso": "texto_largo",
+      "nombre": "Maximiliano Bartolomé",
+      "apellido": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "codigo_postal": "C1425",
+      "productos": ["Sauce Labs Fleece Jacket", "Sauce Labs Bolt T-Shirt", "Test.allTheThings() T-Shirt (Red)"]
+    }
+  ],
+  "datos_incompletos": [
+    {
+      "caso": "sin_nombre",
+      "nombre": "",
+      "apellido": "Frisone",
+      "codigo_postal": "1704",
+      "mensaje_error": "Error: First Name is required"
+    },
+    {
+      "caso": "sin_apellido",
+      "nombre": "Alexis",
+      "apellido": "",
+      "codigo_postal": "1704",
+      "mensaje_error": "Error: Last Name is required"
+    },
+    {
+      "caso": "sin_codigo_postal",
+      "nombre": "Alexis",
+      "apellido": "Frisone",
+      "codigo_postal": "",
+      "mensaje_error": "Error: Postal Code is required"
+    },
+    {
+      "caso": "formulario_vacio",
+      "nombre": "",
+      "apellido": "",
+      "codigo_postal": "",
+      "mensaje_error": "Error: First Name is required"
+    }
+  ]
+}

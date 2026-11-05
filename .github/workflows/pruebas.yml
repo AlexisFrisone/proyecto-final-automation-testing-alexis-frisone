@@ -1,0 +1,39 @@
+name: Pruebas automatizadas
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      # Google Chrome ya viene instalado en las máquinas ubuntu-latest de GitHub;
+      # Selenium Manager descarga el ChromeDriver compatible automáticamente.
+      - name: Ejecutar la suite (UI + API) en modo headless
+        env:
+          HEADLESS: "true"
+        run: pytest
+
+      - name: Publicar reporte, log y capturas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-pruebas
+          path: reports/
+          retention-days: 30

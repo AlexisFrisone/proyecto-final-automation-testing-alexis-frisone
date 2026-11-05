@@ -1,0 +1,14 @@
+caso,usuario,password,resultado,mensaje_error
+usuario_estandar,standard_user,secret_sauce,exito,
+usuario_con_problemas,problem_user,secret_sauce,exito,
+usuario_lento,performance_glitch_user,secret_sauce,exito,
+usuario_visual,visual_user,secret_sauce,exito,
+password_incorrecta,standard_user,password_incorrecta,error,Epic sadface: Username and password do not match any user in this service
+usuario_inexistente,usuario_que_no_existe,secret_sauce,error,Epic sadface: Username and password do not match any user in this service
+usuario_bloqueado,locked_out_user,secret_sauce,error,"Epic sadface: Sorry, this user has been locked out."
+ambos_campos_vacios,,,error,Epic sadface: Username is required
+usuario_vacio,,secret_sauce,error,Epic sadface: Username is required
+password_vacia,standard_user,,error,Epic sadface: Password is required
+usuario_en_mayusculas,STANDARD_USER,secret_sauce,error,Epic sadface: Username and password do not match any user in this service
+password_en_mayusculas,standard_user,SECRET_SAUCE,error,Epic sadface: Username and password do not match any user in this service
+usuario_con_espacios,"  standard_user  ",secret_sauce,error,Epic sadface: Username and password do not match any user in this service

@@ -1,0 +1,23 @@
+{
+  "total_catalogo": 6,
+  "combinaciones_carrito": [
+    {
+      "caso": "un_producto",
+      "productos": ["Sauce Labs Backpack"]
+    },
+    {
+      "caso": "dos_productos",
+      "productos": ["Sauce Labs Bike Light", "Sauce Labs Bolt T-Shirt"]
+    },
+    {
+      "caso": "tres_productos",
+      "productos": ["Sauce Labs Fleece Jacket", "Sauce Labs Onesie", "Test.allTheThings() T-Shirt (Red)"]
+    }
+  ],
+  "ordenamientos": [
+    {"caso": "nombre_a_z", "criterio": "az", "campo": "nombre", "descendente": false},
+    {"caso": "nombre_z_a", "criterio": "za", "campo": "nombre", "descendente": true},
+    {"caso": "precio_menor_a_mayor", "criterio": "lohi", "campo": "precio", "descendente": false},
+    {"caso": "precio_mayor_a_menor", "criterio": "hilo", "campo": "precio", "descendente": true}
+  ]
+}
